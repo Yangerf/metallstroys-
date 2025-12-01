@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Подслушано Металлострой — Игра</title>
+    <style>
+        /* ВСЕ СТИЛИ ВСТРОЕНЫ - НЕТ ВНЕШНИХ ФАЙЛОВ */
+        * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
+        body {
+            background: linear-gradient(135deg,#1a2a6c,#2a5298);
+            color: white; min-height:100vh; padding:20px;
+        }
+        .container { max-width:1000px; margin:0 auto; padding:10px; }
+        .header { text-align:center; margin-bottom:20px; padding:20px; background:rgba(0,0,0,0.3); border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
+        .rainbow-text {
+            font-size:2rem; font-weight:bold;
+            background:linear-gradient(90deg,red,orange,yellow,green,blue,purple);
+            background-size:400% 400%; -webkit-background-clip:text; background-clip:text; color:transparent;
+            animation:rainbow 3s ease infinite; margin:10px 0;
+        }
+        .stats-bar { display:flex; justify-content:space-between; background:rgba(255,255,255,0.08); border-radius:10px; padding:15px; margin:15px 0; flex-wrap:wrap; }
+        .stat { text-align:center; flex:1; min-width:120px; margin:5px; }
+        .stat-value { font-size:1.2rem; font-weight:bold; margin:5px 0; }
+        .money { color: gold; }
+        .hunger { color: #ff6666; }
+        .health { color: #66ff66; }
+        .car-display { text-align:center; margin:10px 0; font-size:1.1rem; color:#ffcc00; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; }
+        .click-area { text-align:center; margin:20px 0; }
+        .coin {
+            width:120px; height:120px; background: radial-gradient(circle at 30% 30%, gold, orange);
+            border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:2rem;
+            color:#996600; cursor:pointer; border:4px solid orange; box-shadow:0 0 20px gold; user-select:none; transition:transform .1s;
+        }
+        .coin:active { transform:scale(0.95); box-shadow:0 0 30px gold; }
+        .tabs { display:flex; background:rgba(0,0,0,0.3); border-radius:10px 10px 0 0; overflow:hidden; flex-wrap:wrap; }
+        .tab { flex:1; padding:12px; text-align:center; cursor:pointer; background:rgba(255,255,255,0.08); transition:background .3s; min-width:100px; }
+        .tab.active { background:rgba(255,255,255,0.14); font-weight:bold; }
+        .tab-content { display:none; background:rgba(255,255,255,0.08); border-radius:0 0 10px 10px; padding:15px; min-height:220px; }
+        .tab-content.active { display:block; }
+        .shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+        .shop-item { background:rgba(0,0,0,0.3); border-radius:10px; padding:12px; transition:transform .2s; }
+        .shop-item:hover { transform:translateY(-3px); background:rgba(0,0,0,0.38); }
+        .shop-item-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .shop-item-name { font-weight:bold; font-size:1rem; }
+        .shop-item-cost { color:gold; font-weight:bold; }
+        .shop-item-description { color:#ccc; font-size:.85rem; margin-bottom:8px; }
+        .buy-btn {
+            background:linear-gradient(135deg,#4CAF50,#2E7D32); color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; width:100%; transition:background .3s;
+        }
+        .buy-btn:disabled { background:#666; cursor:not-allowed; }
+        .buy-btn:not(:disabled):hover { background:linear-gradient(135deg,#66BB6A,#388E3C); }
+        .notification { position:fixed; top:20px; right:20px; background:#333; color:white; padding:10px 15px; border-radius:8px; box-shadow:0 3px 10px rgba(0,0,0,0.3); display:none; z-index:1000; max-width:300px; word-wrap:break-word; }
+        .dino-game-container { text-align:center; margin-top:15px; }
+        .dino-game { background:#fff; border-radius:8px; overflow:hidden; margin:0 auto; max-width:500px; }
+        .dino-canvas { display:block; background:#f7f7f7; width:100%; height:150px; }
+        .dino-controls { margin-top:10px; display:flex; justify-content:center; gap:10px; }
+        .dino-btn { background:linear-gradient(135deg,#4CAF50,#2E7D32); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; }
+        .dino-stats { display:flex; justify-content:space-between; margin-top:8px; color:#333; background:rgba(255,255,255,0.9); padding:8px; border-radius:5px; }
+        .control-buttons { display:flex; justify-content:center; gap:10px; margin-top:20px; flex-wrap:wrap; }
+        .control-btn { background:linear-gradient(135deg,#9C27B0,#6A1B9A); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; }
+        @keyframes rainbow { 0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%} }
+        @media (max-width:600px){
+            .rainbow-text { font-size:1.5rem; }
+            .stats-bar { flex-direction:column; gap:8px; }
+            .shop-grid { grid-template-columns:1fr; }
+            .tab { min-width:33%; font-size:.9rem; padding:10px 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="rainbow-text">Подслушано Металлострой</div>
+            <div class="stats-bar">
+                <div class="stat">
+                    <div>Баланс</div>
+                    <div class="stat-value money" id="money">0 М</div>
+                </div>
+                <div class="stat">
+                    <div>Доход</div>
+                    <div class="stat-value" id="income">+0 М/сек</div>
+                </div>
+                <div class="stat">
+                    <div>Голод</div>
+                    <div class="stat-value hunger" id="hunger">100%</div>
+                </div>
+                <div class="stat">
+                    <div>Здоровье</div>
+                    <div class="stat-value health" id="health">100%</div>
+                </div>
+            </div>
+            <div class="car-display" id="carDisplay">🚲 Велосипед</div>
+        </div>
+
+        <div class="click-area">
+            <div class="coin" id="coin">М</div>
+            <p style="margin-top:8px; color:#ccc; font-size:.9rem;">Кликай для заработка!</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="auto-clicker">Автокликер</div>
+            <div class="tab" data-tab="food">Магазин еды</div>
+            <div class="tab" data-tab="garage">Гараж</div>
+            <div class="tab" data-tab="business">Бизнесы</div>
+            <div class="tab" data-tab="entertainment">Развлечения</div>
+        </div>
+
+        <div class="tab-content active" id="auto-clicker-tab">
+            <h3 style="text-align:center; margin-bottom:15px; color:gold;">Автокликер</h3>
+            <div class="shop-item">
+                <div class="shop-item-header">
+                    <div class="shop-item-name">🤖 Автокликер</div>
+                    <div class="shop-item-cost" id="autoClickerCost">500 М</div>
+                </div>
+                <div class="shop-item-description">
+                    Уровень: <span id="autoClickerLevel">0</span> | Доход: +<span id="autoClickerIncome">0</span> М/сек
+                </div>
+                <button class="buy-btn" id="autoClickerBtn" onclick="buyAutoClicker()">Улучшить</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="food-tab">
+            <h3 style="text-align:center; margin-bottom:15px; color:gold;">Магазин еды</h3>
+            <div class="shop-grid">
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🍎 Яблоко</div>
+                        <div class="shop-item-cost">5 М</div>
+                    </div>
+                    <div class="shop-item-description">+5% голода</div>
+                    <button class="buy-btn" onclick="buyFood('apple')">Купить</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🥖 Хлеб</div>
+                        <div class="shop-item-cost">10 М</div>
+                    </div>
+                    <div class="shop-item-description">+10% голода</div>
+                    <button class="buy-btn" onclick="buyFood('bread')">Купить</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🍲 Суп</div>
+                        <div class="shop-item-cost">25 М</div>
+                    </div>
+                    <div class="shop-item-description">+25% голода</div>
+                    <button class="buy-btn" onclick="buyFood('soup')">Купить</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🍖 Шашлык</div>
+                        <div class="shop-item-cost">40 М</div>
+                    </div>
+                    <div class="shop-item-description">+40% голода</div>
+                    <button class="buy-btn" onclick="buyFood('shashlik')">Купить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="garage-tab">
+            <h3 style="text-align:center; margin-bottom:15px; color:gold;">Гараж</h3>
+            <div class="shop-grid">
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🚲 Велосипед</div>
+                        <div class="shop-item-cost">0 М</div>
+                    </div>
+                    <div class="shop-item-description">Базовый транспорт</div>
+                    <button class="buy-btn" onclick="buyCar('bicycle')" id="bicycleBtn">Выбрано</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🚗 Лада Гранта</div>
+                        <div class="shop-item-cost">600,000 М</div>
+                    </div>
+                    <div class="shop-item-description">Надежная отечественная</div>
+                    <button class="buy-btn" onclick="buyCar('lada')" id="ladaBtn">Купить</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🚙 KIA Rio</div>
+                        <div class="shop-item-cost">1,200,000 М</div>
+                    </div>
+                    <div class="shop-item-description">Популярная иномарка</div>
+                    <button class="buy-btn" onclick="buyCar('kia')" id="kiaBtn">Купить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="business-tab">
+            <h3 style="text-align:center; margin-bottom:15px; color:gold;">Бизнесы</h3>
+            <div class="shop-grid">
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🏭 Акции завода</div>
+                        <div class="shop-item-cost">10,000 М</div>
+                    </div>
+                    <div class="shop-item-description">+10 М/сек</div>
+                    <button class="buy-btn" id="factoryBtn" onclick="buyBusiness('factory')">Купить</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🛒 Пятёрочка</div>
+                        <div class="shop-item-cost">50,000 М</div>
+                    </div>
+                    <div class="shop-item-description">+30 М/сек</div>
+                    <button class="buy-btn" id="pyaterochkaBtn" onclick="buyBusiness('pyaterochka')">Купить</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-header">
+                        <div class="shop-item-name">🏪 Магнит</div>
+                        <div class="shop-item-cost">80,000 М</div>
+                    </div>
+                    <div class="shop-item-description">+50 М/сек</div>
+                    <button class="buy-btn" id="magnetBtn" onclick="buyBusiness('magnet')">Купить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="entertainment-tab">
+            <h3 style="text-align:center; margin-bottom:15px; color:gold;">Развлечения</h3>
+
+            <div class="dino-game-container">
+                <h4 style="text-align:center; margin-bottom:10px;">🦖 Динозаврик</h4>
+                <div class="dino-game">
+                    <canvas id="dinoCanvas" width="500" height="150" class="dino-canvas"></canvas>
+                </div>
+                <div class="dino-stats">
+                    <div>Очки: <span id="dinoScore">0</span></div>
+                    <div>Рекорд: <span id="dinoHighScore">0</span></div>
+                </div>
+                <div class="dino-controls">
+                    <button class="dino-btn" onclick="startDinoGame()">Начать игру</button>
+                    <button class="dino-btn" onclick="pauseDinoGame()">Пауза</button>
+                </div>
+                <p style="margin-top:8px; color:#ccc; font-size:.8rem;">Пробел или стрелка вверх для прыжка</p>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="control-btn" onclick="saveGame()">💾 Сохранить</button>
+            <button class="control-btn" onclick="loadGame()">🔄 Загрузить</button>
+            <button class="control-btn" onclick="resetGame()">🔁 Новая игра</button>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // --- Игровые переменные ---
+        let money = 0;
+        let income = 0;
+        let hunger = 100;
+        let health = 100;
+        let level = 1;
+        let autoClickerLevel = 0;
+        let autoClickerIncome = 0;
+        let currentCar = "bicycle";
+        let hungerTimer = 0;
+
+        const cars = {
+            bicycle: { name: "🚲 Велосипед", cost: 0 },
+            lada: { name: "🚗 Лада Гранта", cost: 600000 },
+            kia: { name: "🚙 KIA Rio", cost: 1200000 },
+            bmw: { name: "🚘 BMW X5", cost: 6500000 },
+            mercedes: { name: "🏎️ Mercedes S-Class", cost: 12000000 },
+            lambo: { name: "🚀 Lamborghini", cost: 25000000 }
+        };
+
+        const businesses = {
+            factory: { cost: 10000, income: 10, bought: false },
+            pyaterochka: { cost: 50000, income: 30, bought: false },
+            magnet: { cost: 80000, income: 50, bought: false }
+        };
+
+        const foods = {
+            apple: { cost: 5, effect: 5 },
+            bread: { cost: 10, effect: 10 },
+            soup: { cost: 25, effect: 25 },
+            shashlik: { cost: 40, effect: 40 }
+        };
+
+        // --- Динозаврик ---
+        let dinoGameActive = false;
+        let dinoGamePaused = false;
+        let dinoScore = 0;
+        let dinoHighScore = 0;
+        let dinoGameInterval = null;
+        let dinoY = 0;
+        let dinoJumping = false;
+        let dinoVelocity = 0;
+        let obstacles = [];
+
+        // --- Элементы ---
+        const moneyEl = document.getElementById('money');
+        const incomeEl = document.getElementById('income');
+        const hungerEl = document.getElementById('hunger');
+        const healthEl = document.getElementById('health');
+        const coinEl = document.getElementById('coin');
+        const notificationEl = document.getElementById('notification');
+        const carDisplayEl = document.getElementById('carDisplay');
+        const autoClickerLevelEl = document.getElementById('autoClickerLevel');
+        const autoClickerIncomeEl = document.getElementById('autoClickerIncome');
+        const autoClickerCostEl = document.getElementById('autoClickerCost');
+        const autoClickerBtn = document.getElementById('autoClickerBtn');
+        const dinoCanvas = document.getElementById('dinoCanvas');
+        const dinoScoreEl = document.getElementById('dinoScore');
+        const dinoHighScoreEl = document.getElementById('dinoHighScore');
+
+        // --- Вкладки ---
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                const content = document.getElementById(`${tab.dataset.tab}-tab`);
+                if (content) content.classList.add('active');
+            });
+        });
+
+        // --- Клик по монете ---
+        coinEl.addEventListener('click', function() {
+            money += 1;
+            updateDisplay();
+            showNotification('+1 М', '#ffd54f');
+        });
+
+        // --- Функции покупки еды ---
+        function buyFood(type) {
+            const food = foods[type];
+            if (!food) return;
+            if (money >= food.cost) {
+                money -= food.cost;
+                hunger = Math.min(100, hunger + food.effect);
+                updateDisplay();
+                showNotification('Поел! +' + food.effect + '% голода', '#a5d6a7');
+            } else {
+                showNotification('Недостаточно денег!', '#ef9a9a');
+            }
+        }
+
+        // --- Покупка бизнеса ---
+        function buyBusiness(type) {
+            const business = businesses[type];
+            if (!business) return;
+            if (business.bought) {
+                showNotification('Уже куплено!', '#ffb74d');
+                return;
+            }
+            if (money >= business.cost) {
+                money -= business.cost;
+                income += business.income;
+                business.bought = true;
+                updateDisplay();
+                updateButtons();
+                showNotification('Бизнес куплен! +' + business.income + ' М/сек', '#81d4fa');
+            } else {
+                showNotification('Недостаточно денег!', '#ef9a9a');
+            }
+        }
+
+        // --- Покупка машины ---
+        function buyCar(type) {
+            const car = cars[type];
+            if (!car) return;
+            if (type === 'bicycle') {
+                currentCar = 'bicycle';
+                updateDisplay();
+                updateButtons();
+                showNotification('Выбрали Велосипед', '#ffe082');
+                return;
+            }
+            if (money >= car.cost) {
+                money -= car.cost;
+                currentCar = type;
+                updateDisplay();
+                updateButtons();
+                showNotification('Куплена ' + car.name + '!', '#ffd54f');
+            } else {
+                showNotification('Недостаточно денег!', '#ef9a9a');
+            }
+        }
+
+        // --- Улучшение автокликера ---
+        function buyAutoClicker() {
+            if (autoClickerLevel >= 5) {
+                showNotification('Максимальный уровень!', '#ffb74d');
+                return;
+            }
+            const cost = 500 * Math.pow(2, autoClickerLevel); // 500, 1000, 2000, 4000, 8000
+            if (money >= cost) {
+                money -= cost;
+                autoClickerLevel++;
+                autoClickerIncome = Math.pow(2, autoClickerLevel - 1); // 1,2,4,8,16
+                updateDisplay();
+                updateButtons();
+                showNotification('Автокликер улучшен! Уровень ' + autoClickerLevel, '#b39ddb');
+            } else {
+                showNotification('Недостаточно денег!', '#ef9a9a');
+            }
+        }
+
+        // --- Динозаврик: управление ---
+        function startDinoGame() {
+            if (dinoGameActive && !dinoGamePaused) return;
+            dinoGameActive = true;
+            dinoGamePaused = false;
+            dinoScore = 0;
+            dinoY = 0;
+            dinoJumping = false;
+            dinoVelocity = 0;
+            obstacles = [];
+            updateDinoScore();
+            drawDinoGame();
+            if (dinoGameInterval) clearInterval(dinoGameInterval);
+            dinoGameInterval = setInterval(updateDinoGame, 50);
+            showNotification('Игра началась!', '#a5d6a7');
+        }
+
+        function pauseDinoGame() {
+            if (!dinoGameActive) return;
+            dinoGamePaused = !dinoGamePaused;
+            if (dinoGamePaused) {
+                if (dinoGameInterval) clearInterval(dinoGameInterval);
+                drawDinoGame();
+                showNotification('Игра на паузе', '#ffb74d');
+            } else {
+                dinoGameInterval = setInterval(updateDinoGame, 50);
+                showNotification('Игра продолжается', '#a5d6a7');
+            }
+        }
+
+        function updateDinoGame() {
+            if (!dinoGameActive || dinoGamePaused) return;
+            dinoScore++;
+            // Гравитация и прыжок
+            if (dinoJumping) {
+                dinoY += dinoVelocity;
+                dinoVelocity += 1;
+                if (dinoY >= 0) {
+                    dinoY = 0;
+                    dinoJumping = false;
+                    dinoVelocity = 0;
+                }
+            }
+            // Случайные препятствия
+            if (Math.random() < 0.05) {
+                obstacles.push({ x: dinoCanvas.width, width: 20 + Math.floor(Math.random() * 10), height: 20 + Math.floor(Math.random() * 30) });
+            }
+            // Движение препятствий
+            obstacles.forEach(obstacle => { obstacle.x -= 5; });
+            // Удаление вышедших за экран
+            obstacles = obstacles.filter(obstacle => obstacle.x > -obstacle.width);
+            // Проверка столкновений
+            obstacles.forEach(obstacle => {
+                // dino at x ~ 40..60, y baseline = 0 (ground). dino height 30.
+                const dinoLeft = 40;
+                const dinoRight = 60;
+                const dinoTop = ( -dinoY );
+                const dinoBottom = dinoTop + 30;
+                const obsLeft = obstacle.x;
+                const obsRight = obstacle.x + obstacle.width;
+                const obsTop = -obstacle.height;
+                const obsBottom = 0;
+                // Simplified collision: when obstacle near dino horizontal and dino on ground
+                if (obsLeft < dinoRight && obsRight > dinoLeft && dinoY === 0) {
+                    // collision
+                    dinoGameActive = false;
+                    if (dinoGameInterval) clearInterval(dinoGameInterval);
+                    showNotification('Игра окончена! Очки: ' + dinoScore, '#ef9a9a');
+                    if (dinoScore > dinoHighScore) {
+                        dinoHighScore = dinoScore;
+                        updateDinoScore();
+                    }
+                }
+            });
+            updateDinoScore();
+            drawDinoGame();
+        }
+
+        function drawDinoGame() {
+            const ctx = dinoCanvas.getContext('2d');
+            const width = dinoCanvas.width;
+            const height = dinoCanvas.height;
+            // Очистка
+            ctx.clearRect(0, 0, width, height);
+            // Земля
+            ctx.fillStyle = '#535353';
+            ctx.fillRect(0, height - 20, width, 20);
+            // Динозаврик
+            ctx.fillStyle = '#535353';
+            ctx.fillRect(40, height - 50 - dinoY, 20, 30);
+            // Препятствия
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = '#2a8c55';
+                ctx.fillRect(obstacle.x, height - 20 - obstacle.height, obstacle.width, obstacle.height);
+            });
+            // Облака
+            ctx.fillStyle = '#f0f0f0';
+            ctx.beginPath();
+            ctx.arc(200, 50, 15, 0, Math.PI * 2);
+            ctx.arc(220, 50, 20, 0, Math.PI * 2);
+            ctx.arc(240, 50, 15, 0, Math.PI * 2);
+            ctx.fill();
+            // Пауза
+            if (dinoGamePaused) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(0, 0, width, height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ПАУЗА', width / 2, height / 2);
+            }
+        }
+
+        function updateDinoScore() {
+            dinoScoreEl.textContent = dinoScore;
+            dinoHighScoreEl.textContent = dinoHighScore;
+        }
+
+        // Прыжок динозаврика
+        document.addEventListener('keydown', function(e) {
+            if ((e.code === 'Space' || e.key === 'ArrowUp') && dinoGameActive && !dinoGamePaused && !dinoJumping) {
+                dinoJumping = true;
+                dinoVelocity = -12; // уменьшил силу прыжка чтобы было удобнее
+                showNotification('Прыжок!', '#90caf9');
+            }
+        });
+
+        // --- Обновление дисплея и кнопок ---
+        function updateDisplay() {
+            moneyEl.textContent = money.toLocaleString() + ' М';
+            incomeEl.textContent = '+' + (income + autoClickerIncome) + ' М/сек';
+            hungerEl.textContent = hunger + '%';
+            healthEl.textContent = health + '%';
+            carDisplayEl.textContent = cars[currentCar] ? cars[currentCar].name : currentCar;
+            autoClickerLevelEl.textContent = autoClickerLevel;
+            autoClickerIncomeEl.textContent = autoClickerIncome;
+        }
+
+        function updateButtons() {
+            // Бизнесы
+            for (const [key, business] of Object.entries(businesses)) {
+                const btn = document.getElementById(key + 'Btn');
+                if (!btn) continue;
+                if (business.bought) {
+                    btn.textContent = 'Куплено';
+                    btn.disabled = true;
+                } else {
+                    btn.textContent = business.cost.toLocaleString() + ' М';
+                    btn.disabled = money < business.cost;
+                }
+            }
+            // Машины (в UI есть только bicycle, lada, kia)
+            for (const [key, car] of Object.entries(cars)) {
+                const btn = document.getElementById(key + 'Btn');
+                if (!btn) continue;
+                if (currentCar === key) {
+                    btn.textContent = 'Выбрано';
+                    btn.disabled = true;
+                } else {
+                    btn.textContent = car.cost.toLocaleString() + ' М';
+                    btn.disabled = money < car.cost;
+                }
+            }
+            // Автокликер
+            if (autoClickerLevel < 5) {
+                const cost = 500 * Math.pow(2, autoClickerLevel);
+                autoClickerCostEl.textContent = cost.toLocaleString() + ' М';
+                autoClickerBtn.textContent = 'Улучшить';
+                autoClickerBtn.disabled = money < cost;
+            } else {
+                autoClickerCostEl.textContent = 'Макс. ур.';
+                autoClickerBtn.textContent = 'Максимальный уровень';
+                autoClickerBtn.disabled = true;
+            }
+        }
+
+        // --- Уведомления ---
+        let noteTimeout = null;
+        function showNotification(text, color) {
+            if (noteTimeout) {
+                clearTimeout(noteTimeout);
+                noteTimeout = null;
+            }
+            notificationEl.textContent = text;
+            // цвет можно передать как hex или rgba
+            notificationEl.style.background = color || '#333';
+            notificationEl.style.display = 'block';
+            noteTimeout = setTimeout(() => {
+                notificationEl.style.display = 'none';
+            }, 2000);
+        }
+
+        // --- Игровой цикл (секунда) ---
+        setInterval(() => {
+            // доход
+            money += income + autoClickerIncome;
+            // голод
+            hungerTimer++;
+            if (hungerTimer >= 10) {
+                hunger = Math.max(0, hunger - 1);
+                hungerTimer = 0;
+            }
+            // если голод 0 — здоровье падает
+            if (hunger === 0) {
+                health = Math.max(0, health - 2);
+                if (health === 0) {
+                    // если нет денег — потеря половины
+                    if (money >= 1000) {
+                        money -= 1000;
+                        showNotification('Лечение стоило 1000 М!', '#ffcc80');
+                    } else {
+                        money = Math.floor(money / 2);
+                        showNotification('Потеряли половину денег!', '#ef9a9a');
+                    }
+                    health = 100;
+                    hunger = 50;
+                }
+            }
+            updateDisplay();
+            updateButtons();
+        }, 1000);
+
+        // --- Сохранение/Загрузка ---
+        function saveGame() {
+            try {
+                const saveData = {
+                    money: money,
+                    income: income,
+                    hunger: hunger,
+                    health: health,
+                    autoClickerLevel: autoClickerLevel,
+                    autoClickerIncome: autoClickerIncome,
+                    currentCar: currentCar,
+                    dinoHighScore: dinoHighScore,
+                    businesses: businesses
+                };
+                localStorage.setItem('metallostroySave', JSON.stringify(saveData));
+                showNotification('Игра сохранена!', '#a5d6a7');
+            } catch (e) {
+                console.error('Save error', e);
+                showNotification('Ошибка сохранения!', '#ef9a9a');
+            }
+        }
+
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem('metallostroySave');
+                if (!saved) {
+                    showNotification('Нет сохраненной игры', '#ffb74d');
+                    return;
+                }
+                const data = JSON.parse(saved);
+                money = typeof data.money === 'number' ? data.money : 0;
+                income = typeof data.income === 'number' ? data.income : 0;
+                hunger = typeof data.hunger === 'number' ? data.hunger : 100;
+                health = typeof data.health === 'number' ? data.health : 100;
+                autoClickerLevel = typeof data.autoClickerLevel === 'number' ? data.autoClickerLevel : 0;
+                autoClickerIncome = typeof data.autoClickerIncome === 'number' ? data.autoClickerIncome : (autoClickerLevel > 0 ? Math.pow(2, autoClickerLevel - 1) : 0);
+                currentCar = data.currentCar || "bicycle";
+                dinoHighScore = data.dinoHighScore || 0;
+                // восстановить купленные бизнесы (без ссылок на прототипы)
+                if (data.businesses && typeof data.businesses === 'object') {
+                    for (const key of Object.keys(businesses)) {
+                        if (data.businesses[key] && typeof data.businesses[key].bought !== 'undefined') {
+                            businesses[key].bought = !!data.businesses[key].bought;
+                        } else {
+                            businesses[key].bought = false;
+                        }
+                    }
+                }
+                // обновим income, т.к. при загрузке мы должны пересчитать доход от купленных бизнесов
+                income = 0;
+                for (const [k, b] of Object.entries(businesses)) {
+                    if (b.bought) income += b.income;
+                }
+                updateDisplay();
+                updateButtons();
+                updateDinoScore();
+                showNotification('Игра загружена!', '#a5d6a7');
+            } catch (e) {
+                console.error('Load error', e);
+                showNotification('Ошибка загрузки!', '#ef9a9a');
+            }
+        }
+
+        function resetGame() {
+            if (!confirm('Начать новую игру? Весь прогресс будет потерян!')) return;
+            money = 0;
+            income = 0;
+            hunger = 100;
+            health = 100;
+            autoClickerLevel = 0;
+            autoClickerIncome = 0;
+            currentCar = "bicycle";
+            dinoHighScore = 0;
+            for (const key in businesses) {
+                if (businesses.hasOwnProperty(key)) businesses[key].bought = false;
+            }
+            updateDisplay();
+            updateButtons();
+            updateDinoScore();
+            showNotification('Новая игра начата!', '#ffd54f');
+            try {
+                localStorage.removeItem('metallostroySave');
+            } catch (e) { /* ignore */ }
+        }
+
+        // --- Автосохранение каждые 10 секунд ---
+        setInterval(() => {
+            try {
+                const saveData = {
+                    money: money,
+                    income: income,
+                    hunger: hunger,
+                    health: health,
+                    autoClickerLevel: autoClickerLevel,
+                    autoClickerIncome: autoClickerIncome,
+                    currentCar: currentCar,
+                    dinoHighScore: dinoHighScore,
+                    businesses: businesses
+                };
+                localStorage.setItem('metallostroySave', JSON.stringify(saveData));
+            } catch (e) {
+                console.error('Autosave error', e);
+            }
+        }, 10000);
+
+        // --- Инициализация UI ---
+        function init() {
+            updateDisplay();
+            updateButtons();
+            drawDinoGame();
+            // попытаемся загрузить автоматом (если есть)
+            try {
+                const saved = localStorage.getItem('metallostroySave');
+                if (saved) {
+                    // вызываем загрузку, но без уведомления, чтобы не мешать
+                    const data = JSON.parse(saved);
+                    money = typeof data.money === 'number' ? data.money : 0;
+                    income = 0;
+                    if (data.businesses && typeof data.businesses === 'object') {
+                        for (const key of Object.keys(businesses)) {
+                            if (data.businesses[key] && typeof data.businesses[key].bought !== 'undefined') {
+                                businesses[key].bought = !!data.businesses[key].bought;
+                            } else {
+                                businesses[key].bought = false;
+                            }
+                        }
+                    }
+                    for (const [k, b] of Object.entries(businesses)) {
+                        if (b.bought) income += b.income;
+                    }
+                    autoClickerLevel = typeof data.autoClickerLevel === 'number' ? data.autoClickerLevel : 0;
+                    autoClickerIncome = typeof data.autoClickerIncome === 'number' ? data.autoClickerIncome : (autoClickerLevel > 0 ? Math.pow(2, autoClickerLevel - 1) : 0);
+                    hunger = typeof data.hunger === 'number' ? data.hunger : 100;
+                    health = typeof data.health === 'number' ? data.health : 100;
+                    currentCar = data.currentCar || 'bicycle';
+                    dinoHighScore = data.dinoHighScore || 0;
+                }
+            } catch (e) {
+                console.error('Init load error', e);
+            }
+            updateDisplay();
+            updateButtons();
+            updateDinoScore();
+        }
+
+        // Запуск инициализации
+        init();
+
+    </script>
+</body>
+</html>
